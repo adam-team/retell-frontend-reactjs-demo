@@ -16,11 +16,20 @@
     "stream": "^0.0.2"
   },
   "devDependencies": {
-    "@types/node": "^20.10.4"
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.25.9",
+    "@babel/preset-typescript": "^7.26.0",
+    "@types/node": "^20.10.4",
+    "html-webpack-plugin": "^5.6.3",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.6.3",
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "webpack serve --mode development --open",
+    "build": "webpack --mode production",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
