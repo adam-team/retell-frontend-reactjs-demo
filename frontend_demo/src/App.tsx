@@ -71,10 +71,11 @@ const App = () => {
 
   async function registerCall(agentId: string): Promise<RegisterCallResponse> {
     try {
-      const response = await fetch("http://localhost:8080/create-web-call", {
+      const response = await fetch("https://api.retellai.com/v2/create-web-call", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": "Bearer key_274b61d46b97c35f128f8beed1b3"
         },
         body: JSON.stringify({
           agent_id: agentId,
