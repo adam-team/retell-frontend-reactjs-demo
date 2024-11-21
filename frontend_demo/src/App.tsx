@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import "./App.css";
 import { RetellWebClient } from "retell-client-js-sdk";
 import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
@@ -14,60 +14,70 @@ const retellWebClient = new RetellWebClient();
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
+  const [labelText, setLabelText] = useState("Essayer");
+  const audioStreamRef = useRef<MediaStream | null>(null);
 
-  // Initialize the SDK
+  const stopMicrophone = useCallback(() => {
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => {
+        track.stop(); // Arrête chaque piste
+      });
+      audioStreamRef.current = null; // Réinitialise la référence
+    }
+  }, []);
+
+  const handleError = useCallback((error: any) => {
+    console.error("An error occurred:", error);
+    setLabelText('Veuillez réessayer plus tard');
+    handleStopCall(false);
+  }, []);
+
   useEffect(() => {
     retellWebClient.on("call_started", () => {
       console.log("call started");
+      setLabelText("Parlez..");
     });
 
     retellWebClient.on("call_ended", () => {
       console.log("call ended");
-      setIsCalling(false);
+      handleStopCall(true);
     });
 
-    retellWebClient.on("agent_start_talking", () => {
-      console.log("agent_start_talking");
-    });
+    retellWebClient.on("error", handleError);
 
-    retellWebClient.on("agent_stop_talking", () => {
-      console.log("agent_stop_talking");
-    });
-
-    retellWebClient.on("audio", (audio) => {
-      // console.log(audio);
-    });
-
-    retellWebClient.on("update", (update) => {
-      // console.log(update);
-    });
-
-    retellWebClient.on("metadata", (metadata) => {
-      // console.log(metadata);
-    });
-
-    retellWebClient.on("error", (error) => {
-      console.error("An error occurred:", error);
-      // Stop the call
-      retellWebClient.stopCall();
-    });
-  }, []);
+    return () => {
+      handleStopCall(false);
+      retellWebClient.off("error", handleError);
+    };
+  }, [handleError]);
 
   const toggleConversation = async () => {
     if (isCalling) {
-      retellWebClient.stopCall();
+      handleStopCall(true);
     } else {
       try {
+        setLabelText("Connexion en cours...");
         const registerCallResponse = await registerCall(agentId);
         if (registerCallResponse.access_token) {
           await retellWebClient.startCall({
             accessToken: registerCallResponse.access_token,
           });
-          setIsCalling(true); // Update button to "Stop" when conversation starts
+          setIsCalling(true);
+          setLabelText("Parlez..");
         }
       } catch (error) {
-        console.error("Failed to start call:", error);
+        handleError(error);
       }
+    }
+  };
+
+  const handleStopCall = (success: boolean) => {
+    retellWebClient.stopCall();
+    setIsCalling(false);
+    stopMicrophone(); // Arrête le microphone
+    if (success) {
+      setLabelText("Essayer");
     }
   };
 
@@ -91,20 +101,28 @@ const App = () => {
       const data: RegisterCallResponse = await response.json();
       return data;
     } catch (err) {
-      if (err instanceof Error) {
-        console.error(err.message); // Affiche le message d'erreur
-        throw new Error(err.message); // Relance l'erreur avec le message
-      } else {
-        console.error("An unknown error occurred.");
-        throw new Error("An unknown error occurred.");
-      }
+      console.error("Error in registerCall:", err);
+      throw err;
     }
   }
-  
-  const getLabelText = () => {
-    if (!isCalling) return "Essayer";
-    if (isCalling && isHovering) return "Appuyez pour raccrocher.";
-    return "Parlez..";
+
+  const handleButtonClick = async () => {
+    if (isCalling) {
+      handleStopCall(true);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      setShowMessage(false);
+      await toggleConversation();
+    } catch (error) {
+      console.error("Erreur lors de l'accès au microphone:", error);
+      setShowMessage(true);
+      setIsCalling(false);
+      setLabelText("Erreur d'accès au microphone");
+    }
   };
 
   return (
@@ -112,9 +130,9 @@ const App = () => {
       <header className="App-header">
         <div className="mic-container">
           <button 
-            onClick={toggleConversation}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
+            onClick={handleButtonClick}
+            onMouseEnter={() => isCalling && setLabelText("Appuyez pour raccrocher.")}
+            onMouseLeave={() => isCalling && setLabelText("Parlez..")}
             className={`mic-button ${isCalling ? 'active' : ''}`}
           >
             {isCalling && isHovering ? (
@@ -123,7 +141,8 @@ const App = () => {
               <FaMicrophone />
             )}
           </button>
-          <div className="label">{getLabelText()}</div> {/* Assurez-vous que cette ligne est présente */}
+          {showMessage && <p>Veuillez autoriser l'accès au microphone</p>}
+          <div className="label">{labelText}</div>
         </div>
       </header>
     </div>
