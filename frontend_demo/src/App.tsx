@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import "./App.css";
 import { RetellWebClient } from "retell-client-js-sdk";
 import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
@@ -13,24 +13,12 @@ const retellWebClient = new RetellWebClient();
 
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const [showMessage, setShowMessage] = useState(false);
   const [labelText, setLabelText] = useState("Essayer");
-  const audioStreamRef = useRef<MediaStream | null>(null);
-
-  const stopMicrophone = useCallback(() => {
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach(track => {
-        track.stop(); // Arrête chaque piste
-      });
-      audioStreamRef.current = null; // Réinitialise la référence
-    }
-  }, []);
 
   const handleError = useCallback((error: any) => {
     console.error("An error occurred:", error);
     setLabelText('Veuillez réessayer plus tard');
-    handleStopCall(false);
+    setIsCalling(false);
   }, []);
 
   useEffect(() => {
@@ -41,20 +29,22 @@ const App = () => {
 
     retellWebClient.on("call_ended", () => {
       console.log("call ended");
-      handleStopCall(true);
+      setIsCalling(false);
+      setLabelText("Essayer");
     });
 
     retellWebClient.on("error", handleError);
 
     return () => {
-      handleStopCall(false);
       retellWebClient.off("error", handleError);
     };
   }, [handleError]);
 
   const toggleConversation = async () => {
     if (isCalling) {
-      handleStopCall(true);
+      retellWebClient.stopCall(); // Arrête l'appel
+      setIsCalling(false); // Met à jour l'état
+      setLabelText("Essayer"); // Réinitialise le label
     } else {
       try {
         setLabelText("Connexion en cours...");
@@ -72,15 +62,6 @@ const App = () => {
     }
   };
 
-  const handleStopCall = (success: boolean) => {
-    retellWebClient.stopCall();
-    setIsCalling(false);
-    stopMicrophone(); // Arrête le microphone
-    if (success) {
-      setLabelText("Essayer");
-    }
-  };
-
   async function registerCall(agentId: string): Promise<RegisterCallResponse> {
     try {
       const response = await fetch("https://api.retellai.com/v2/create-web-call", {
@@ -89,17 +70,12 @@ const App = () => {
           "Content-Type": "application/json",
           "Authorization": "Bearer key_274b61d46b97c35f128f8beed1b3"
         },
-        body: JSON.stringify({
-          agent_id: agentId,
-        }),
+        body: JSON.stringify({ agent_id: agentId }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Error: ${response.status}`);
 
-      const data: RegisterCallResponse = await response.json();
-      return data;
+      return await response.json();
     } catch (err) {
       console.error("Error in registerCall:", err);
       throw err;
@@ -108,20 +84,16 @@ const App = () => {
 
   const handleButtonClick = async () => {
     if (isCalling) {
-      handleStopCall(true);
+      toggleConversation(); // Raccroche si déjà en appel
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioStreamRef.current = stream;
-      setShowMessage(false);
-      await toggleConversation();
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      toggleConversation(); // Démarre la conversation
     } catch (error) {
       console.error("Erreur lors de l'accès au microphone:", error);
-      setShowMessage(true);
-      setIsCalling(false);
-      setLabelText("Erreur d'accès au microphone");
+      setLabelText("Autorisez l'accès au microphone");
     }
   };
 
@@ -135,13 +107,8 @@ const App = () => {
             onMouseLeave={() => isCalling && setLabelText("Parlez..")}
             className={`mic-button ${isCalling ? 'active' : ''}`}
           >
-            {isCalling && isHovering ? (
-              <FaMicrophoneSlash />
-            ) : (
-              <FaMicrophone />
-            )}
+            {isCalling ? <FaMicrophoneSlash /> : <FaMicrophone />}
           </button>
-          {showMessage && <p>Veuillez autoriser l'accès au microphone</p>}
           <div className="label">{labelText}</div>
         </div>
       </header>
