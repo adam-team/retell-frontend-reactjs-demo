@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import "./App.css";
 import { RetellWebClient } from "retell-client-js-sdk";
+import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 
 const agentId = "agent_359f0c4c6467d316455d6b051f";
 
@@ -12,6 +13,7 @@ const retellWebClient = new RetellWebClient();
 
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
 
   // Initialize the SDK
   useEffect(() => {
@@ -98,16 +100,34 @@ const App = () => {
       }
     }
   }
+  
+  const getLabelText = () => {
+    if (!isCalling) return "Essayer";
+    if (isCalling && isHovering) return "Appuyez pour raccrocher.";
+    return "Parlez..";
+  };
 
   return (
     <div className="App">
       <header className="App-header">
-        <button onClick={toggleConversation}>
-          {isCalling ? "Stop" : "Start"}
-        </button>
+        <div className="mic-container">
+          <button 
+            onClick={toggleConversation}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            className={`mic-button ${isCalling ? 'active' : ''}`}
+          >
+            {isCalling && isHovering ? (
+              <FaMicrophoneSlash />
+            ) : (
+              <FaMicrophone />
+            )}
+          </button>
+          <div className="label">{getLabelText()}</div> {/* Assurez-vous que cette ligne est présente */}
+        </div>
       </header>
     </div>
   );
-};
+}
 
 export default App;

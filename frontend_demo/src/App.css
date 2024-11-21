@@ -1,16 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap');
+
 .App {
   text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
 }
 
 .App-header {
@@ -24,15 +15,79 @@
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.mic-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.mic-button {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-color: #0070FB;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  /* Effet de flou de base */
+  box-shadow: 0 0 40px rgba(0, 112, 251, 0.7);
+}
+
+.mic-button.active {
+  background-color: #005ac8;
+
+  /* Animation de pulsation du blur */
+  animation: pulse-blur 2.7s infinite;
+}
+
+/* Animation de pulsation */
+@keyframes pulse-blur {
+  0% {
+    box-shadow: 0 0 40px rgba(0, 112, 251, 0.7);
+    transform: scale(1);
   }
-  to {
-    transform: rotate(360deg);
-  }
+  
+   /* Animation de pulsation */
+   50% {
+     box-shadow: 0 0 25px rgba(0,112,251,.9);
+     transform: scale(1.1);
+   }
+  
+   /* Animation de pulsation */
+   100% {
+     box-shadow: 0px,0px,40px rgba(0,112,251,.7);
+     transform: scale(1);
+   }
+}
+
+.mic-button svg {
+   color: #181E26; /* Couleur par défaut */
+   font-size: 30px;
+   transition: color .3s ease; /* Transition pour la couleur */
+}
+
+.mic-button.active svg {
+   color: #FF4136; /* Rouge vif pour indiquer que le micro est actif */
+}
+
+.mic-button:hover:not(.active) {
+  background-color: #187efa; /* Couleur de fond plus claire au survol */
+  box-shadow: 0px 0px 70px #0070FB; /* Ombre plus claire et plus large au survol */
+}
+
+.label {
+  margin-top:20px; /* Espace au-dessus du label */
+  background-color:#DEE8F6; /* Couleur de fond du label */
+  border-radius:999px; /* Bordure arrondie */
+  padding:6px 20px; /* Padding du label */
+  font-family:'Poppins',sans-serif; /* Police Poppins */
+  font-size:12px; /* Taille de police */
+  line-height:1.2; /* Espacement de ligne */
+  text-transform:uppercase; /* Texte en majuscules */
+  color: #084DB3; /* Couleur du texte */
+  letter-spacing: 0.5px; /* Espacement des lettres (ajustez selon vos préférences) */
 }
