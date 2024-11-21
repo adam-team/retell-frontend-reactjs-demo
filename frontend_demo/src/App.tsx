@@ -14,6 +14,7 @@ const retellWebClient = new RetellWebClient();
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
   const [labelText, setLabelText] = useState("Essayer");
+  const [isHovering, setIsHovering] = useState(false); // État pour gérer le survol
 
   const handleError = useCallback((error: any) => {
     console.error("An error occurred:", error);
@@ -103,11 +104,11 @@ const App = () => {
         <div className="mic-container">
           <button 
             onClick={handleButtonClick}
-            onMouseEnter={() => isCalling && setLabelText("Appuyez pour raccrocher.")}
-            onMouseLeave={() => isCalling && setLabelText("Parlez..")}
+            onMouseEnter={() => isCalling && setIsHovering(true)}
+            onMouseLeave={() => isCalling && setIsHovering(false)}
             className={`mic-button ${isCalling ? 'active' : ''}`}
           >
-            {isCalling ? <FaMicrophoneSlash /> : <FaMicrophone />}
+            {isCalling && isHovering ? <FaMicrophoneSlash /> : <FaMicrophone />} {/* Icône selon l'état */}
           </button>
           <div className="label">{labelText}</div>
         </div>
