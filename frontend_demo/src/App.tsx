@@ -3,7 +3,7 @@ import "./App.css";
 import { RetellWebClient } from "retell-client-js-sdk";
 import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 
-const agentId = "agent_359f0c4c6467d316455d6b051f";
+const agentId = "agent_bd5498a76717ceb507ca2591e4";
 
 interface RegisterCallResponse {
   access_token: string;
@@ -69,7 +69,7 @@ const App = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer key_274b61d46b97c35f128f8beed1b3"
+          "Authorization": "Bearer key_6149571e8dadbf893f4cf7e08cec"
         },
         body: JSON.stringify({ agent_id: agentId }),
       });
