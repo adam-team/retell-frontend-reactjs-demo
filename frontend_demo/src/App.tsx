@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from 'react';
 import "./App.css";
 import { RetellWebClient } from "retell-client-js-sdk";
+import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 
-const agentId = "ENTER_YOUR_AGENT_ID";
+const agentId = "agent_bd5498a76717ceb507ca2591e4";
 
 interface RegisterCallResponse {
   access_token: string;
@@ -12,107 +13,108 @@ const retellWebClient = new RetellWebClient();
 
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
+  const [labelText, setLabelText] = useState("Essayer");
+  const [isHovering, setIsHovering] = useState(false); // État pour gérer le survol
 
-  // Initialize the SDK
+  const handleError = useCallback((error: any) => {
+    console.error("An error occurred:", error);
+    setLabelText('Veuillez réessayer plus tard');
+    setIsCalling(false);
+  }, []);
+
   useEffect(() => {
     retellWebClient.on("call_started", () => {
       console.log("call started");
+      setLabelText("Parlez..");
     });
-    
+
     retellWebClient.on("call_ended", () => {
       console.log("call ended");
       setIsCalling(false);
+      setLabelText("Essayer");
     });
-    
-    // When agent starts talking for the utterance
-    // useful for animation
-    retellWebClient.on("agent_start_talking", () => {
-      console.log("agent_start_talking");
-    });
-    
-    // When agent is done talking for the utterance
-    // useful for animation
-    retellWebClient.on("agent_stop_talking", () => {
-      console.log("agent_stop_talking");
-    });
-    
-    // Real time pcm audio bytes being played back, in format of Float32Array
-    // only available when emitRawAudioSamples is true
-    retellWebClient.on("audio", (audio) => {
-      // console.log(audio);
-    });
-    
-    // Update message such as transcript
-    // You can get transcrit with update.transcript
-    // Please note that transcript only contains last 5 sentences to avoid the payload being too large
-    retellWebClient.on("update", (update) => {
-      // console.log(update);
-    });
-    
-    retellWebClient.on("metadata", (metadata) => {
-      // console.log(metadata);
-    });
-    
-    retellWebClient.on("error", (error) => {
-      console.error("An error occurred:", error);
-      // Stop the call
-      retellWebClient.stopCall();
-    });
-  }, []);
+
+    retellWebClient.on("error", handleError);
+
+    return () => {
+      retellWebClient.off("error", handleError);
+    };
+  }, [handleError]);
 
   const toggleConversation = async () => {
     if (isCalling) {
-      retellWebClient.stopCall();
+      retellWebClient.stopCall(); // Arrête l'appel
+      setIsCalling(false); // Met à jour l'état
+      setLabelText("Essayer"); // Réinitialise le label
     } else {
-      const registerCallResponse = await registerCall(agentId);
-      if (registerCallResponse.access_token) {
-        retellWebClient
-          .startCall({
+      try {
+        setLabelText("Connexion en cours...");
+        const registerCallResponse = await registerCall(agentId);
+        if (registerCallResponse.access_token) {
+          await retellWebClient.startCall({
             accessToken: registerCallResponse.access_token,
-          })
-          .catch(console.error);
-        setIsCalling(true); // Update button to "Stop" when conversation starts
+          });
+          setIsCalling(true);
+          setLabelText("Parlez..");
+        }
+      } catch (error) {
+        handleError(error);
       }
     }
   };
 
   async function registerCall(agentId: string): Promise<RegisterCallResponse> {
     try {
-      // Update the URL to match the new backend endpoint you created
-      const response = await fetch("http://localhost:8080/create-web-call", {
+      const response = await fetch("https://api.retellai.com/v2/create-web-call", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": "Bearer key_6149571e8dadbf893f4cf7e08cec"
         },
-        body: JSON.stringify({
-          agent_id: agentId, // Pass the agentId as agent_id
-          // You can optionally add metadata and retell_llm_dynamic_variables here if needed
-          // metadata: { your_key: "your_value" },
-          // retell_llm_dynamic_variables: { variable_key: "variable_value" }
-        }),
+        body: JSON.stringify({ agent_id: agentId }),
       });
-  
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-  
-      const data: RegisterCallResponse = await response.json();
-      return data;
+
+      if (!response.ok) throw new Error(`Error: ${response.status}`);
+
+      return await response.json();
     } catch (err) {
-      console.log(err);
-      throw new Error(err);
+      console.error("Error in registerCall:", err);
+      throw err;
     }
   }
+
+  const handleButtonClick = async () => {
+    if (isCalling) {
+      toggleConversation(); // Raccroche si déjà en appel
+      return;
+    }
+
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      toggleConversation(); // Démarre la conversation
+    } catch (error) {
+      console.error("Erreur lors de l'accès au microphone:", error);
+      setLabelText("Autorisez l'accès au microphone");
+    }
+  };
 
   return (
     <div className="App">
       <header className="App-header">
-        <button onClick={toggleConversation}>
-          {isCalling ? "Stop" : "Start"}
-        </button>
+        <div className="mic-container">
+          <button 
+            onClick={handleButtonClick}
+            onMouseEnter={() => isCalling && setIsHovering(true)}
+            onMouseLeave={() => isCalling && setIsHovering(false)}
+            className={`mic-button ${isCalling ? 'active' : ''}`}
+          >
+            {isCalling && isHovering ? <FaMicrophoneSlash /> : <FaMicrophone />} {/* Icône selon l'état */}
+          </button>
+          <div className="label">{labelText}</div>
+        </div>
       </header>
     </div>
   );
-};
+}
 
 export default App;
